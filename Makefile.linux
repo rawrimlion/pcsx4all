@@ -67,6 +67,7 @@ OBJS += obj/zlib/adler32.o obj/zlib/compress.o obj/zlib/crc32.o obj/zlib/gzio.o 
     obj/zlib/inffast.o obj/zlib/infutil.o
 
 OBJS += obj/port/$(PORT)/port.o
+OBJS += obj/port/$(PORT)/frontend.o
 
 OBJS += obj/profiler.o obj/debug.o
 
