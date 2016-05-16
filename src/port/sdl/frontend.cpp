@@ -13,6 +13,10 @@
 #include "profiler.h"
 #include <SDL.h>
 
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif
+
 #define timer_delay(a)	wait_ticks(a*1000)
 
 enum  {
