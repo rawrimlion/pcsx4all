@@ -114,8 +114,7 @@ void sort_dir(struct dir_item *list, int num_items, int sepdir)
 	}
 }
 
-char gamepath[256] = ".";
-static char filereq_fullgamepath[257];
+static char gamepath[257] = "./";
 static struct dir_item filereq_dir_items[1024] = { { 0, 0 }, };
 
 #define MENU_X		8
@@ -152,8 +151,7 @@ char *FileReq(char *dir, const char *ext)
 				gamepath[i] = '/';
 		}
 #endif
-		sprintf(filereq_fullgamepath, "%s/", gamepath);
-		cwd = filereq_fullgamepath;
+		cwd = gamepath;
 	}
 
 	for (;;) {
@@ -294,10 +292,6 @@ char *FileReq(char *dir, const char *ext)
 					if (keys & KEY_SELECT)
 						return NULL;
 					if (keys & KEY_START) {
-						/* Store the 10 character filename in CdromLabel so save states work */
-						char *p = strrchr(path, '/');
-						if (p != NULL)
-							sprintf(CdromLabel, "%10.10s", p + 1);
 						return path;
 					}
 
