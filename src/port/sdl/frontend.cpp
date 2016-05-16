@@ -143,6 +143,7 @@ char *FileReq(char *dir, const char *ext)
 
 	if (cwd == NULL) {
 		getcwd(gamepath, 256);
+		strcat(gamepath, "/");
 #ifdef __WIN32__
 		for (int i = 0; i < 256; i++) {
 			if (gamepath[i] == 0)
@@ -160,8 +161,10 @@ char *FileReq(char *dir, const char *ext)
 		video_clear();
 
 		if (keys & KEY_SELECT) {
-			for (int i = 0; i < num_items; i++) if (filereq_dir_items[i].name) {
-					free(filereq_dir_items[i].name); filereq_dir_items[i].name = NULL;
+			for (int i = 0; i < num_items; i++)
+				if (filereq_dir_items[i].name) {
+					free(filereq_dir_items[i].name);
+					filereq_dir_items[i].name = NULL;
 				}
 			num_items = 0;
 			timer_delay(100);
@@ -248,8 +251,10 @@ char *FileReq(char *dir, const char *ext)
 					    + strlen(filereq_dir_items[cursor_pos].name)
 					    + 2);
 			sprintf(path, "%s/%s", cwd, filereq_dir_items[cursor_pos].name);
-			for (int i = 0; i < num_items; i++) if (filereq_dir_items[i].name) {
-					free(filereq_dir_items[i].name); filereq_dir_items[i].name = NULL;
+			for (int i = 0; i < num_items; i++)
+				if (filereq_dir_items[i].name) {
+					free(filereq_dir_items[i].name);
+					filereq_dir_items[i].name = NULL;
 				}
 			num_items = 0;
 			if (filereq_dir_items[cursor_pos].type == 0) {
