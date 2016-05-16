@@ -741,6 +741,15 @@ int main (int argc, char **argv)
 
 	SCREEN = (Uint16 *)screen->pixels;
 
+	if (argc < 2) {
+		printf("No arg given\n");
+		const char *name = FileReq(NULL, NULL);
+		if (name)
+			strcpy((char *)cdrfilename, name);
+		else
+			pcsx4all_exit();
+	}
+
 	if (psxInit() == -1) {
 		printf("PSX emulator couldn't be initialized.\n");
 		pcsx4all_exit();
