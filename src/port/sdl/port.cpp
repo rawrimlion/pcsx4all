@@ -741,13 +741,14 @@ int main (int argc, char **argv)
 
 	SCREEN = (Uint16 *)screen->pixels;
 
-	if (argc < 2) {
-		printf("No arg given\n");
+	if (argc < 2 || cdrfilename[0] == '\0') {
 		const char *name = FileReq(NULL, NULL);
-		if (name)
-			strcpy((char *)cdrfilename, name);
-		else
+		if (name) {
+			SetIsoFile(name);
+		} else {
+			printf("ERROR: missing filename for -iso\n");
 			pcsx4all_exit();
+		}
 	}
 
 	if (psxInit() == -1) {
