@@ -826,7 +826,7 @@ void wait_ticks(unsigned s)
 #endif
 }
 
-void port_printf(int x,int y,char *text)
+void port_printf(int x, int y, const char *text)
 {
 	static const unsigned char fontdata8x8[] =
 	{
