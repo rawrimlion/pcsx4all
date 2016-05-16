@@ -114,9 +114,10 @@ char gamepath[256] = ".";
 static char filereq_fullgamepath[257];
 static struct dir_item filereq_dir_items[1024] = { { 0, 0 }, };
 
+#define MENU_X		8
 #define MENU_Y		90
 #define MENU_LS		(MENU_Y + 10)
-#define MENU_HEIGHT	12
+#define MENU_HEIGHT	13
 
 char *FileReq(char *dir, const char *ext)
 {
@@ -223,7 +224,7 @@ char *FileReq(char *dir, const char *ext)
 		}
 
 		// display current directory
-		port_printf(80, MENU_Y, cwd);
+		port_printf(0, MENU_Y, cwd);
 
 		if (keys & KEY_DOWN) { //down
 			if (cursor_pos < (num_items - 1)) cursor_pos++;
@@ -279,9 +280,9 @@ char *FileReq(char *dir, const char *ext)
 				}
 			} else {
 				video_clear();
-				port_printf(10, 120, "ARE YOU SURE YOU WANT TO SELECT...");
-				port_printf(10, 130, path);
-				port_printf(10, 140, "PRESS START FOR YES OR SELECT FOR NO");
+				port_printf(0, 120, "ARE YOU SURE YOU WANT TO SELECT...");
+				port_printf(0, 130, path);
+				port_printf(0, 140, "PRESS START FOR YES OR SELECT FOR NO");
 				video_flip();
 				// file selected check if it was intended
 				for (;; ) {
@@ -306,15 +307,15 @@ char *FileReq(char *dir, const char *ext)
 		while (row < num_items && row < MENU_HEIGHT) {
 			if (row == (cursor_pos - first_visible)) {
 				// draw cursor
-				port_printf(80, MENU_LS + (10 * row), "------>");
+				port_printf(MENU_X + 16, MENU_LS + (10 * row), "-->");
 
 				selected = filereq_dir_items[row + first_visible].name;
 			}
 
 			if (filereq_dir_items[row + first_visible].type == 0)
-				port_printf(80, MENU_LS + (10 * row), "DIR ");
+				port_printf(MENU_X, MENU_LS + (10 * row), "DIR");
 			snprintf(tmp_string, 30, "%s", filereq_dir_items[row + first_visible].name);
-			port_printf(80 + (10 * 6), MENU_LS + (10 * row), tmp_string);
+			port_printf(MENU_X + (8 * 5), MENU_LS + (10 * row), tmp_string);
 			row++;
 		}
 		while (row < MENU_HEIGHT)
