@@ -147,6 +147,29 @@ do { \
 	num_items = 0; \
 } while (0)
 
+static char *wildcards[] = {"iso", "bin", "img", "mdf", NULL };
+
+static s32 get_entry_type(char *cwd, char *d_name)
+{
+	s32 type;
+	struct stat item;
+	char *path = (char *)malloc(strlen(cwd) + strlen(d_name) + 2);
+
+	sprintf(path, "%s/%s", cwd, d_name);
+	if (!stat(path, &item)) {
+		if (S_ISDIR(item.st_mode)) {
+			type = 0;
+		} else {
+			type = 1;
+		}
+	} else {
+		type = 0;
+	}
+
+	free(path);
+	return type;
+}
+
 char *FileReq(char *dir, const char *ext, char *result)
 {
 	static char *cwd = NULL;
@@ -155,8 +178,6 @@ char *FileReq(char *dir, const char *ext, char *result)
 	static s32 num_items = 0;
 	DIR *dirstream;
 	struct dirent *direntry;
-	char *path;
-	struct stat item;
 	static s32 row;
 	char tmp_string[32];
 	char *selected;
@@ -188,9 +209,11 @@ char *FileReq(char *dir, const char *ext, char *result)
 			}
 			// read directory entries
 			while ((direntry = readdir(dirstream))) {
+				s32 type = get_entry_type(cwd, direntry->d_name);
+
 				// this is a very ugly way of only accepting a certain extension
-				if ((ext == NULL &&
-				     ((NULL == strstr(direntry->d_name, ".")) ||
+				if ((type == 0 && strcmp(direntry->d_name, ".")) ||
+				     (ext == NULL && ((NULL == strstr(direntry->d_name, ".")) ||
 				      (strlen(direntry->d_name) > 1 && 0 == strncasecmp(direntry->d_name, "..", 2)) ||
 				      (strlen(direntry->d_name) > 2 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 2), ".z", 2)) ||
 				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".iso", 4)) ||
@@ -201,37 +224,13 @@ char *FileReq(char *dir, const char *ext, char *result)
 				    (ext != NULL && (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - strlen(ext)), ext, strlen(ext))))) {
 					filereq_dir_items[num_items].name = (char *)malloc(strlen(direntry->d_name) + 1);
 					strcpy(filereq_dir_items[num_items].name, direntry->d_name);
+					filereq_dir_items[num_items].type = type;
 					num_items++;
 					if (num_items > 1024) break;
 				}
 			}
 			closedir(dirstream);
-			// get entry types
-			for (int i = 0; i < num_items; i++) {
-				path = (char *)malloc(strlen(cwd) + strlen(filereq_dir_items[i].name) + 2);
-				sprintf(path, "%s/%s", cwd, filereq_dir_items[i].name);
-				if (!stat(path, &item)) {
-					if (S_ISDIR(item.st_mode)) {
-						filereq_dir_items[i].type = 0;
-					} else {
-						s32 len = strlen(filereq_dir_items[i].name);
 
-						filereq_dir_items[i].type = 2;
-						/* Not Used */
-						if (len >= 4) {
-							if (!strncasecmp(filereq_dir_items[i].name + (len - 2), ".Z", 2))
-								filereq_dir_items[i].type = 1;
-							if (!strncasecmp(filereq_dir_items[i].name + (len - 4), ".bin", 4))
-								filereq_dir_items[i].type = 1;
-							if (!strncasecmp(filereq_dir_items[i].name + (len - 4), ".ZNX", 4))
-								filereq_dir_items[i].type = 1;
-						}
-					}
-				} else {
-					filereq_dir_items[i].type = 0;
-				}
-				free(path);
-			}
 			sort_dir(filereq_dir_items, num_items, 1);
 			cursor_pos = 0;
 			first_visible = 0;
