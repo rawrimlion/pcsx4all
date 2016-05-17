@@ -149,6 +149,24 @@ do { \
 
 static char *wildcards[] = {"iso", "bin", "img", "mdf", NULL };
 
+static s32 check_ext(const char *name)
+{
+	int len = strlen(name);
+
+	if (len < 4)
+		return 0;
+
+	if (name[len-4] != '.')
+		return 0;
+
+	for (int i = 0; wildcards[i] != NULL; i++) {
+		if (strcasecmp(wildcards[i], &name[len-3]) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
 static s32 get_entry_type(char *cwd, char *d_name)
 {
 	s32 type;
@@ -213,15 +231,8 @@ char *FileReq(char *dir, const char *ext, char *result)
 
 				// this is a very ugly way of only accepting a certain extension
 				if ((type == 0 && strcmp(direntry->d_name, ".")) ||
-				     (ext == NULL && ((NULL == strstr(direntry->d_name, ".")) ||
-				      (strlen(direntry->d_name) > 1 && 0 == strncasecmp(direntry->d_name, "..", 2)) ||
-				      (strlen(direntry->d_name) > 2 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 2), ".z", 2)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".iso", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".bin", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".img", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".znx", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".cbn", 4)))) ||
-				    (ext != NULL && (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - strlen(ext)), ext, strlen(ext))))) {
+				     check_ext(direntry->d_name) ||
+				    (ext && (strlen(direntry->d_name) > 4 &&0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - strlen(ext)), ext, strlen(ext))))) {
 					filereq_dir_items[num_items].name = (char *)malloc(strlen(direntry->d_name) + 1);
 					strcpy(filereq_dir_items[num_items].name, direntry->d_name);
 					filereq_dir_items[num_items].type = type;
