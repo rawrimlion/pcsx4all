@@ -198,7 +198,6 @@ char *FileReq(char *dir, const char *ext, char *result)
 	struct dirent *direntry;
 	static s32 row;
 	char tmp_string[32];
-	char *selected;
 	u32 keys;
 
 	if (dir)
@@ -304,8 +303,6 @@ char *FileReq(char *dir, const char *ext, char *result)
 			if (row == (cursor_pos - first_visible)) {
 				// draw cursor
 				port_printf(MENU_X + 16, MENU_LS + (10 * row), "-->");
-
-				selected = filereq_dir_items[row + first_visible].name;
 			}
 
 			if (filereq_dir_items[row + first_visible].type == 0)
