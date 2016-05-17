@@ -181,7 +181,7 @@ static s32 get_entry_type(char *cwd, char *d_name)
 			type = 1;
 		}
 	} else {
-		type = 0;
+		type = 1;
 	}
 
 	free(path);
