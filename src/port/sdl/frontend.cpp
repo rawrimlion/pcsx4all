@@ -13,8 +13,9 @@
 #include "profiler.h"
 #include <SDL.h>
 
-#ifndef strnicmp
-#define strnicmp strncasecmp
+/* PATH_MAX inclusion */
+#ifdef __MINGW32__
+#include <limits.h>
 #endif
 
 #define timer_delay(a)	wait_ticks(a*1000)
@@ -114,7 +115,7 @@ void sort_dir(struct dir_item *list, int num_items, int sepdir)
 	}
 }
 
-static char gamepath[257] = "./";
+static char gamepath[PATH_MAX] = "./";
 static struct dir_item filereq_dir_items[1024] = { { 0, 0 }, };
 
 #define MENU_X		8
@@ -122,7 +123,31 @@ static struct dir_item filereq_dir_items[1024] = { { 0, 0 }, };
 #define MENU_LS		(MENU_Y + 10)
 #define MENU_HEIGHT	13
 
-char *FileReq(char *dir, const char *ext)
+static char *GetCwd(void)
+{
+	getcwd(gamepath, PATH_MAX);
+#ifdef __WIN32__
+		for (int i = 0; i < PATH_MAX; i++) {
+			if (gamepath[i] == 0)
+				break;
+			if (gamepath[i] == '\\')
+				gamepath[i] = '/';
+		}
+#endif
+	return gamepath;
+}
+
+#define FREE_LIST() \
+do { \
+	for (int i = 0; i < num_items; i++) \
+		if (filereq_dir_items[i].name) { \
+			free(filereq_dir_items[i].name); \
+			filereq_dir_items[i].name = NULL; \
+		} \
+	num_items = 0; \
+} while (0)
+
+char *FileReq(char *dir, const char *ext, char *result)
 {
 	static char *cwd = NULL;
 	static s32 cursor_pos = 1;
@@ -133,26 +158,15 @@ char *FileReq(char *dir, const char *ext)
 	char *path;
 	struct stat item;
 	static s32 row;
-	s32 pathlength;
 	char tmp_string[32];
 	char *selected;
 	u32 keys;
 
-	if (dir != NULL)
-		cwd = dir;
+	if (dir)
+		chdir(dir);
 
-	if (cwd == NULL) {
-		getcwd(gamepath, 256);
-		strcat(gamepath, "/");
-#ifdef __WIN32__
-		for (int i = 0; i < 256; i++) {
-			if (gamepath[i] == 0)
-				break;
-			if (gamepath[i] == '\\')
-				gamepath[i] = '/';
-		}
-#endif
-		cwd = gamepath;
+	if (!cwd) {
+		cwd = GetCwd();
 	}
 
 	for (;;) {
@@ -161,12 +175,7 @@ char *FileReq(char *dir, const char *ext)
 		video_clear();
 
 		if (keys & KEY_SELECT) {
-			for (int i = 0; i < num_items; i++)
-				if (filereq_dir_items[i].name) {
-					free(filereq_dir_items[i].name);
-					filereq_dir_items[i].name = NULL;
-				}
-			num_items = 0;
+			FREE_LIST();
 			timer_delay(100);
 			return NULL;
 		}
@@ -182,14 +191,14 @@ char *FileReq(char *dir, const char *ext)
 				// this is a very ugly way of only accepting a certain extension
 				if ((ext == NULL &&
 				     ((NULL == strstr(direntry->d_name, ".")) ||
-				      (strlen(direntry->d_name) > 1 && 0 == strnicmp(direntry->d_name, "..", 2)) ||
-				      (strlen(direntry->d_name) > 2 && 0 == strnicmp(direntry->d_name + (strlen(direntry->d_name) - 2), ".z", 2)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strnicmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".iso", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strnicmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".bin", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strnicmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".img", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strnicmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".znx", 4)) ||
-				      (strlen(direntry->d_name) > 4 && 0 == strnicmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".cbn", 4)))) ||
-				    (ext != NULL && (strlen(direntry->d_name) > 4 && 0 == strnicmp(direntry->d_name + (strlen(direntry->d_name) - strlen(ext)), ext, strlen(ext))))) {
+				      (strlen(direntry->d_name) > 1 && 0 == strncasecmp(direntry->d_name, "..", 2)) ||
+				      (strlen(direntry->d_name) > 2 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 2), ".z", 2)) ||
+				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".iso", 4)) ||
+				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".bin", 4)) ||
+				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".img", 4)) ||
+				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".znx", 4)) ||
+				      (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - 4), ".cbn", 4)))) ||
+				    (ext != NULL && (strlen(direntry->d_name) > 4 && 0 == strncasecmp(direntry->d_name + (strlen(direntry->d_name) - strlen(ext)), ext, strlen(ext))))) {
 					filereq_dir_items[num_items].name = (char *)malloc(strlen(direntry->d_name) + 1);
 					strcpy(filereq_dir_items[num_items].name, direntry->d_name);
 					num_items++;
@@ -210,11 +219,11 @@ char *FileReq(char *dir, const char *ext)
 						filereq_dir_items[i].type = 2;
 						/* Not Used */
 						if (len >= 4) {
-							if (!strnicmp(filereq_dir_items[i].name + (len - 2), ".Z", 2))
+							if (!strncasecmp(filereq_dir_items[i].name + (len - 2), ".Z", 2))
 								filereq_dir_items[i].type = 1;
-							if (!strnicmp(filereq_dir_items[i].name + (len - 4), ".bin", 4))
+							if (!strncasecmp(filereq_dir_items[i].name + (len - 4), ".bin", 4))
 								filereq_dir_items[i].type = 1;
-							if (!strnicmp(filereq_dir_items[i].name + (len - 4), ".ZNX", 4))
+							if (!strncasecmp(filereq_dir_items[i].name + (len - 4), ".ZNX", 4))
 								filereq_dir_items[i].type = 1;
 						}
 					}
@@ -247,48 +256,22 @@ char *FileReq(char *dir, const char *ext)
 			if ((cursor_pos - first_visible) >= MENU_HEIGHT)
 				first_visible = cursor_pos - (MENU_HEIGHT - 1);
 		} else if (keys & KEY_A) { // button 1
-			path = (char *)malloc(strlen(cwd)
-					    + strlen(filereq_dir_items[cursor_pos].name)
-					    + 2);
-			sprintf(path, "%s/%s", cwd, filereq_dir_items[cursor_pos].name);
-			for (int i = 0; i < num_items; i++)
-				if (filereq_dir_items[i].name) {
-					free(filereq_dir_items[i].name);
-					filereq_dir_items[i].name = NULL;
-				}
-			num_items = 0;
+			// directory selected
 			if (filereq_dir_items[cursor_pos].type == 0) {
-				// directory selected
-				pathlength = strlen(path);
-				if (path[pathlength - 1] == '.' &&
-				    path[pathlength - 2] == '/') { // check for . selected
-					path[pathlength - 2] = '\0';
-					cwd = path;
-				} else if (path[pathlength - 1] == '.'
-					   && path[pathlength - 2] == '.'
-					   && path[pathlength - 3] == '/') { // check for .. selected
-					if (pathlength > 4) {
-						char *p = strrchr(path, '/');     // PATH: /x/y/z/..[/]
-						p[0] = '\0';
-						p = strrchr(path, '/');         // PATH: /x/y/z[/]../
-						p[0] = '\0';
-						p = strrchr(path, '/');         // PATH: /x/y[/]z/../
-						p[1] = '\0';                    // PATH: /x/y/
+				strcat(cwd, "/");
+				strcat(cwd, filereq_dir_items[cursor_pos].name);
 
-						cwd = path;
-					}
-				} else {
-					// dirty fix
-					if (path[0] == '/' &&
-					    path[1] == '/')
-						cwd = path + 1; // Add 1 to ignore the first slash. This occurs when traversing to root dir.
-					else
-						cwd = path;
-				}
+				chdir(cwd);
+				cwd = GetCwd();
+				FREE_LIST();
 			} else {
+				sprintf(result, "%s/%s", cwd, filereq_dir_items[cursor_pos].name);
+
+				FREE_LIST();
+
 				video_clear();
 				port_printf(0, 120, "ARE YOU SURE YOU WANT TO SELECT...");
-				port_printf(0, 130, path);
+				port_printf(0, 130, result);
 				port_printf(0, 140, "PRESS START FOR YES OR SELECT FOR NO");
 				video_flip();
 				// file selected check if it was intended
@@ -297,7 +280,7 @@ char *FileReq(char *dir, const char *ext)
 					if (keys & KEY_SELECT)
 						return NULL;
 					if (keys & KEY_START) {
-						return path;
+						return result;
 					}
 
 					timer_delay(100);
