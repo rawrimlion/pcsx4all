@@ -410,7 +410,11 @@ static void ShowMenuItem(int x, int y, MENUITEM *mi)
 
 	if (mi->name) {
 		if (mi->par) {
-			sprintf(string, "%s %d", mi->name, *mi->par);
+			if (mi->par_name) {
+				sprintf(string, "%s %s", mi->name, mi->par_name[*mi->par]);
+			} else {
+				sprintf(string, "%s %d", mi->name, *mi->par);
+			}
 			port_printf(x, y, string);
 		} else
 			port_printf(x, y, mi->name);
