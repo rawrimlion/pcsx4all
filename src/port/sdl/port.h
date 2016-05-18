@@ -38,6 +38,6 @@ extern void port_mute(void);
 
 extern unsigned short *SCREEN;
 
-char *FileReq(char *dir, const char *ext, char *result);
+int SelectGame();
 
 #endif

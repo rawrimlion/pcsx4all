@@ -324,3 +324,118 @@ char *FileReq(char *dir, const char *ext, char *result)
 
 	return NULL;
 }
+
+static int gui_LoadIso()
+{
+	static char isoname[PATH_MAX];
+	const char *name = FileReq(NULL, NULL, isoname);
+
+	if (name) {
+		SetIsoFile(name);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int gui_Quit()
+{
+	pcsx4all_exit();
+	return 0;
+}
+
+typedef struct {
+	char *name;
+	int *par;
+	int min, max;
+	char **par_name;
+	int (*on_press_a)();
+} MENUITEM;
+
+typedef struct {
+	int num;
+	int cur;
+	int x, y;
+	MENUITEM *m; // array of items
+} MENU;
+
+static MENUITEM gui_MainMenuItems[] = {
+	{(char *)"LOAD GAME", NULL, 0, 0, NULL, &gui_LoadIso},
+	{(char *)"SETTINGS", NULL, 0, 0, NULL, NULL},
+	{(char *)"LOAD STATE: ", NULL, 0, 0, NULL, NULL},
+	{(char *)"SAVE STATE: ", NULL, 0, 0, NULL, NULL},
+	{(char *)"QUIT ", NULL, 0, 0, NULL, &gui_Quit},
+	{0}
+};
+
+static MENU gui_MainMenu = { 5, 0, 112, 120, (MENUITEM *)&gui_MainMenuItems };
+
+static void ShowMenu(MENU *menu)
+{
+	MENUITEM *mi = menu->m;
+
+	// show menu lines
+	for(int i = 0; i < menu->num; i++, mi++) {
+		if (mi->name)
+			port_printf(menu->x, menu->y + i * 10, mi->name);
+	}
+
+	// show cursor
+	port_printf(menu->x - 3 * 8, menu->y + menu->cur * 10, "-->");
+
+	// general copyrights info
+	port_printf( 4 * 8,  0, "pcsx4all 2.3 by Franxis and Chui");
+	port_printf( 0 * 8, 10, "based on pcsx-r 1.9 and psx4all-dingoo");
+	port_printf( 4 * 8, 20, "mips recompiler by Ulrich Hecht");
+	port_printf( 7 * 8, 30, "optimized by Dmitry Smagin");
+}
+
+static int gui_RunMenu(MENU *menu)
+{
+	MENUITEM *mi;
+	u32 keys;
+
+	for (;;) {
+		mi = menu->m + menu->cur;
+		keys = key_read();
+
+		video_clear();
+
+		// check keys
+		if (keys & KEY_SELECT) {
+			timer_delay(100);
+			return 0;
+		} else if (keys & KEY_UP) {
+			if (--menu->cur < 0)
+				menu->cur = menu->num - 1;
+		} else if (keys & KEY_DOWN) {
+			if (++menu->cur == menu->num)
+				menu->cur = 0;
+		} else if (keys & KEY_A) {
+			if (mi->on_press_a) {
+				timer_delay(500);
+				int result = (*mi->on_press_a)();
+				if (result)
+					return result;
+			}
+		}
+
+		// diplay menu
+		ShowMenu(menu);
+
+		video_flip();
+		timer_delay(75);
+
+		if (keys & (KEY_A | KEY_B | KEY_X | KEY_Y | KEY_L | KEY_R |
+			    KEY_LEFT | KEY_RIGHT | KEY_UP | KEY_DOWN))
+			timer_delay(50);
+	}
+
+	return 0;
+}
+
+/* 0 - exit, 1 - game loaded */
+int SelectGame()
+{
+	return gui_RunMenu(&gui_MainMenu);
+}

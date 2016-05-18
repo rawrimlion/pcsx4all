@@ -742,10 +742,7 @@ int main (int argc, char **argv)
 	SCREEN = (Uint16 *)screen->pixels;
 
 	if (argc < 2 || cdrfilename[0] == '\0') {
-		const char *name = FileReq(NULL, NULL, filename);
-		if (name) {
-			SetIsoFile(name);
-		} else {
+		if (!SelectGame()) {
 			printf("ERROR: missing filename for -iso\n");
 			pcsx4all_exit();
 		}
