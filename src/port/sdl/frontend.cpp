@@ -20,6 +20,8 @@
 
 #define timer_delay(a)	wait_ticks(a*1000)
 
+extern int saveslot;
+
 enum  {
 	KEY_UP=0x1,	KEY_LEFT=0x4,		KEY_DOWN=0x10,	KEY_RIGHT=0x40,
 	KEY_START=1<<8,	KEY_SELECT=1<<9,	KEY_L=1<<10,	KEY_R=1<<11,
@@ -362,13 +364,26 @@ typedef struct {
 static MENUITEM gui_MainMenuItems[] = {
 	{(char *)"LOAD GAME", NULL, 0, 0, NULL, &gui_LoadIso},
 	{(char *)"SETTINGS", NULL, 0, 0, NULL, NULL},
-	{(char *)"LOAD STATE: ", NULL, 0, 0, NULL, NULL},
-	{(char *)"SAVE STATE: ", NULL, 0, 0, NULL, NULL},
+	{(char *)"LOAD STATE", &saveslot, 0, 9, NULL, NULL},
+	{(char *)"SAVE STATE", &saveslot, 0, 9, NULL, NULL},
 	{(char *)"QUIT ", NULL, 0, 0, NULL, &gui_Quit},
 	{0}
 };
 
 static MENU gui_MainMenu = { 5, 0, 112, 120, (MENUITEM *)&gui_MainMenuItems };
+
+static void ShowMenuItem(int x, int y, MENUITEM *mi)
+{
+	static char string[PATH_MAX];
+
+	if (mi->name) {
+		if (mi->par) {
+			sprintf(string, "%s %d", mi->name, *mi->par);
+			port_printf(x, y, string);
+		} else
+			port_printf(x, y, mi->name);
+	}
+}
 
 static void ShowMenu(MENU *menu)
 {
@@ -376,8 +391,7 @@ static void ShowMenu(MENU *menu)
 
 	// show menu lines
 	for(int i = 0; i < menu->num; i++, mi++) {
-		if (mi->name)
-			port_printf(menu->x, menu->y + i * 10, mi->name);
+		ShowMenuItem(menu->x, menu->y + i * 10, mi);
 	}
 
 	// show cursor
@@ -411,6 +425,10 @@ static int gui_RunMenu(MENU *menu)
 		} else if (keys & KEY_DOWN) {
 			if (++menu->cur == menu->num)
 				menu->cur = 0;
+		} else if (keys & KEY_LEFT) {
+			if (mi->par && *mi->par > mi->min) *mi->par -= 1;
+		} else if (keys & KEY_RIGHT) {
+			if (mi->par && *mi->par < mi->max) *mi->par += 1;
 		} else if (keys & KEY_A) {
 			if (mi->on_press_a) {
 				timer_delay(500);

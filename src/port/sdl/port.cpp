@@ -109,7 +109,7 @@ static void setup_paths()
 }
 
 static int autosavestate = 0;
-static int saveslot = 0;
+int saveslot = 0;
 static char savename[256];
 
 static void state_load()
