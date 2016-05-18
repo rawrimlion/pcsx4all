@@ -21,6 +21,10 @@
 #define timer_delay(a)	wait_ticks(a*1000)
 
 extern int saveslot;
+#ifdef gpu_unai
+extern bool show_fps;
+extern bool frameLimit;
+#endif
 
 enum  {
 	KEY_UP=0x1,	KEY_LEFT=0x4,		KEY_DOWN=0x10,	KEY_RIGHT=0x40,
@@ -327,25 +331,6 @@ char *FileReq(char *dir, const char *ext, char *result)
 	return NULL;
 }
 
-static int gui_LoadIso()
-{
-	static char isoname[PATH_MAX];
-	const char *name = FileReq(NULL, NULL, isoname);
-
-	if (name) {
-		SetIsoFile(name);
-		return 1;
-	}
-
-	return 0;
-}
-
-static int gui_Quit()
-{
-	pcsx4all_exit();
-	return 0;
-}
-
 typedef struct {
 	char *name;
 	int *par;
@@ -361,16 +346,63 @@ typedef struct {
 	MENUITEM *m; // array of items
 } MENU;
 
+/* Forward declaration */
+static int gui_RunMenu(MENU *menu);
+static int gui_LoadIso();
+static int gui_Settings();
+static int gui_Quit();
+
 static MENUITEM gui_MainMenuItems[] = {
 	{(char *)"LOAD GAME", NULL, 0, 0, NULL, &gui_LoadIso},
-	{(char *)"SETTINGS", NULL, 0, 0, NULL, NULL},
+	{(char *)"SETTINGS", NULL, 0, 0, NULL, &gui_Settings},
 	{(char *)"LOAD STATE", &saveslot, 0, 9, NULL, NULL},
 	{(char *)"SAVE STATE", &saveslot, 0, 9, NULL, NULL},
 	{(char *)"QUIT ", NULL, 0, 0, NULL, &gui_Quit},
 	{0}
 };
 
-static MENU gui_MainMenu = { 5, 0, 112, 120, (MENUITEM *)&gui_MainMenuItems };
+#define MENU_SIZE ((sizeof(gui_MainMenuItems) / sizeof(MENUITEM)) - 1)
+static MENU gui_MainMenu = { MENU_SIZE, 0, 112, 120, (MENUITEM *)&gui_MainMenuItems };
+
+static char *gui_OffOn[] = {"off", "on"};
+
+static MENUITEM gui_SettingsItems[] = {
+#ifdef gpu_unai
+	{(char *)"Show FPS            ", (int *)&show_fps, 0, 1, (char **)&gui_OffOn, NULL},
+	{(char *)"Frame Limit         ", (int *)&frameLimit, 0, 1, (char **)&gui_OffOn, NULL},
+#endif
+	{(char *)"Cycle multiplier    ", (int *)&BIAS, 1, 4, NULL, NULL},
+	{0}
+};
+
+#define SET_SIZE ((sizeof(gui_SettingsItems) / sizeof(MENUITEM)) - 1)
+static MENU gui_SettingsMenu = { SET_SIZE, 0, 72, 120, (MENUITEM *)&gui_SettingsItems };
+
+static int gui_LoadIso()
+{
+	static char isoname[PATH_MAX];
+	const char *name = FileReq(NULL, NULL, isoname);
+
+	if (name) {
+		SetIsoFile(name);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int gui_Settings()
+{
+	gui_RunMenu(&gui_SettingsMenu);
+
+	return 0;
+}
+
+static int gui_Quit()
+{
+	pcsx4all_exit();
+	return 0;
+}
 
 static void ShowMenuItem(int x, int y, MENUITEM *mi)
 {
