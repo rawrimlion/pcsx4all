@@ -21,23 +21,10 @@
 #ifndef FIXED_H
 #define FIXED_H
 
-//senquack - Added optional float math support:
-//#define GPU_UNAI_USE_FLOATMATH
-
-//#if defined(HAVE_FPU) || (__mips_hard_float == 1)
-//#define GPU_UNAI_USE_FLOATMATH
-//#endif
-
-//senquack - If float math is enabled, this option will use multiply-
-//           by-inverse to do divisions. (I did not find this to speed things
-//           up on GCW Zero platform, so have left it commented-out for now)
-//           
-//#define GPU_UNAI_USE_FLOAT_DIV_MULTINV
-
 typedef s32 fixed;
 
 //senquack - The gpu_drhell poly routines I adapted use 22.10 fixed point,
-//           while original Unai used 16.16:
+//           while original Unai used 16.16: (see README_senquack.txt)
 //#define FIXED_BITS 16
 #define FIXED_BITS 10
 
@@ -85,12 +72,10 @@ INLINE float FloatInv(const float x)
 #endif
 #endif
 
-
-// BEGIN INVERSE APPROXIMATION SECTION
-// (Has not been updated or tested with new 22.10 fixed-point
-//  code that has replaced Unai's 16.16 original code.
-// DISABLED FOR NOW:
-#if 0
+///////////////////////////////////////////////////////////////////////////
+// --- BEGIN INVERSE APPROXIMATION SECTION ---
+///////////////////////////////////////////////////////////////////////////
+#ifdef GPU_UNAI_USE_INT_DIV_MULTINV
 
 //  big precision inverse table.
 #define TABLE_BITS 16
@@ -113,7 +98,9 @@ INLINE  void  xInv (const fixed _b, s32& iFactor_, s32& iShift_)
     u32 uDen = (uD>>uLog);
     iFactor_ = s_invTable[uDen];
     iFactor_ = (_b<0) ? -iFactor_ :iFactor_;
-    iShift_  = 15+uLog;
+    //senquack - Adapted to 22.10 fixed point (originally 16.16):
+    //iShift_  = 15+uLog;
+    iShift_  = 21+uLog;
   }
   else
   {
@@ -139,8 +126,10 @@ INLINE  fixed xLoDivx   (const fixed _a, const fixed _b)
   xInv(_b, iFact, iShift);
   return xInvMulx(_a, iFact, iShift);
 }
-#endif //0
-// END INVERSE APPROXIMATION SECTION
+#endif // GPU_UNAI_USE_INT_DIV_MULTINV
+///////////////////////////////////////////////////////////////////////////
+// --- END INVERSE APPROXIMATION SECTION ---
+///////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////
 template<typename T>
