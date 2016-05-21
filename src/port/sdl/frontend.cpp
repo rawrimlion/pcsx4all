@@ -283,24 +283,12 @@ char *FileReq(char *dir, const char *ext, char *result)
 			} else {
 				sprintf(result, "%s/%s", cwd, filereq_dir_items[cursor_pos].name);
 
-				FREE_LIST();
-
 				video_clear();
-				port_printf(0, 120, "ARE YOU SURE YOU WANT TO SELECT...");
-				port_printf(0, 130, result);
-				port_printf(0, 140, "PRESS START FOR YES OR SELECT FOR NO");
+				port_printf(16 * 8, 120, "LOADING");
 				video_flip();
-				// file selected check if it was intended
-				for (;; ) {
-					u32 keys = key_read();
-					if (keys & KEY_SELECT)
-						return NULL;
-					if (keys & KEY_START) {
-						return result;
-					}
 
-					timer_delay(100);
-				}
+				FREE_LIST();
+				return result;
 			}
 		}
 
