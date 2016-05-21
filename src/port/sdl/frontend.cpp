@@ -20,12 +20,6 @@
 
 #define timer_delay(a)	wait_ticks(a*1000)
 
-extern int saveslot;
-#ifdef gpu_unai
-extern bool show_fps;
-extern bool frameLimit;
-#endif
-
 enum  {
 	KEY_UP=0x1,	KEY_LEFT=0x4,		KEY_DOWN=0x10,	KEY_RIGHT=0x40,
 	KEY_START=1<<8,	KEY_SELECT=1<<9,	KEY_L=1<<10,	KEY_R=1<<11,
@@ -340,9 +334,6 @@ char *FileReq(char *dir, const char *ext, char *result)
 
 typedef struct {
 	char *name;
-	int *par;
-	int min, max;
-	char **par_name;
 	int (*on_press_a)();
 	int (*on_press)(u32 keys);
 	char *(*showval)();
@@ -383,25 +374,94 @@ static char *state_show()
 }
 
 static MENUITEM gui_MainMenuItems[] = {
-	{(char *)"Load game", NULL, 0, 0, NULL, &gui_LoadIso, NULL, NULL},
-	{(char *)"Settings", NULL, 0, 0, NULL, &gui_Settings, NULL, NULL},
-	{(char *)"Load state", NULL, 0, 0, NULL, NULL, &state_alter, &state_show},
-	{(char *)"Save state", NULL, 0, 0, NULL, NULL, &state_alter, &state_show},
-	{(char *)"Quit", NULL, 0, 0, NULL, &gui_Quit, NULL, NULL},
+	{(char *)"Load game", &gui_LoadIso, NULL, NULL},
+	{(char *)"Settings", &gui_Settings, NULL, NULL},
+	{(char *)"Load state", NULL, &state_alter, &state_show},
+	{(char *)"Save state", NULL, &state_alter, &state_show},
+	{(char *)"Quit", &gui_Quit, NULL, NULL},
 	{0}
 };
 
 #define MENU_SIZE ((sizeof(gui_MainMenuItems) / sizeof(MENUITEM)) - 1)
 static MENU gui_MainMenu = { MENU_SIZE, 0, 112, 120, (MENUITEM *)&gui_MainMenuItems };
 
-static char *gui_OffOn[] = {"off", "on"};
+static int fps_alter(u32 keys)
+{
+#ifdef gpu_unai
+	extern bool show_fps;
+
+	if (keys & KEY_RIGHT) {
+		if (show_fps == false) show_fps = true;
+	} else if (keys & KEY_LEFT) {
+		if (show_fps == true) show_fps = false;
+	}
+
+#endif
+	return 0;
+}
+
+static char *fps_show()
+{
+	static char buf[16] = "\0";
+#ifdef gpu_unai
+	extern bool show_fps;
+	sprintf(buf, "%s", show_fps == true ? "on" : "off");
+#endif
+	return buf;
+}
+
+static int framelimit_alter(u32 keys)
+{
+#ifdef gpu_unai
+	extern bool frameLimit;
+
+	if (keys & KEY_RIGHT) {
+		if (frameLimit == false) frameLimit = true;
+	} else if (keys & KEY_LEFT) {
+		if (frameLimit == true) frameLimit = false;
+	}
+
+#endif
+	return 0;
+}
+
+static char *framelimit_show()
+{
+	static char buf[16] = "\0";
+#ifdef gpu_unai
+	extern bool frameLimit;
+	sprintf(buf, "%s", frameLimit == true ? "on" : "off");
+#endif
+	return buf;
+}
+
+static int cycle_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (autobias) { autobias = 0; BIAS = 1; }
+		else if (BIAS < 4) BIAS++;
+	} else if (keys & KEY_LEFT) {
+		if (BIAS > 1) BIAS--;
+		else { autobias = 1; BIAS = 2; }
+	}
+
+	return 0;
+}
+
+static char *cycle_show()
+{
+	static char buf[16] = "\0";
+	if (autobias) strcpy(buf, "auto");
+	else sprintf(buf, "%d", BIAS);
+	return buf;
+}
 
 static MENUITEM gui_SettingsItems[] = {
 #ifdef gpu_unai
-	{(char *)"Show FPS            ", (int *)&show_fps, 0, 1, (char **)&gui_OffOn, NULL, NULL, NULL},
-	{(char *)"Frame Limit         ", (int *)&frameLimit, 0, 1, (char **)&gui_OffOn, NULL, NULL, NULL},
+	{(char *)"Show FPS            ", NULL, &fps_alter, &fps_show},
+	{(char *)"Frame Limit         ", NULL, &framelimit_alter, &framelimit_show},
 #endif
-	{(char *)"Cycle multiplier    ", (int *)&BIAS, 1, 4, NULL, NULL, NULL, NULL},
+	{(char *)"Cycle multiplier    ", NULL, &cycle_alter, &cycle_show},
 	{0}
 };
 
@@ -442,14 +502,6 @@ static void ShowMenuItem(int x, int y, MENUITEM *mi)
 	if (mi->name) {
 		if (mi->showval) {
 			sprintf(string, "%s %s", mi->name, (*mi->showval)());
-			port_printf(x, y, string);
-		} else
-		if (mi->par) {
-			if (mi->par_name) {
-				sprintf(string, "%s %s", mi->name, mi->par_name[*mi->par]);
-			} else {
-				sprintf(string, "%s %d", mi->name, *mi->par);
-			}
 			port_printf(x, y, string);
 		} else
 			port_printf(x, y, mi->name);
@@ -496,10 +548,6 @@ static int gui_RunMenu(MENU *menu)
 		} else if (keys & KEY_DOWN) {
 			if (++menu->cur == menu->num)
 				menu->cur = 0;
-		} else if (keys & KEY_LEFT) {
-			if (mi->par && *mi->par > mi->min) *mi->par -= 1;
-		} else if (keys & KEY_RIGHT) {
-			if (mi->par && *mi->par < mi->max) *mi->par += 1;
 		} else if (keys & KEY_A) {
 			if (mi->on_press_a) {
 				timer_delay(500);
@@ -510,7 +558,9 @@ static int gui_RunMenu(MENU *menu)
 		}
 
 		if ((keys & (KEY_LEFT | KEY_RIGHT)) && mi->on_press) {
-			(*mi->on_press)(keys);
+			int result = (*mi->on_press)(keys);
+			if (result)
+				return result;
 		}
 
 		// diplay menu
