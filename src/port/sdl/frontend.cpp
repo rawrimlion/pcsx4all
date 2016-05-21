@@ -337,6 +337,8 @@ typedef struct {
 	int min, max;
 	char **par_name;
 	int (*on_press_a)();
+	int (*on_press)(u32 keys);
+	char *(*showval)();
 } MENUITEM;
 
 typedef struct {
@@ -352,12 +354,33 @@ static int gui_LoadIso();
 static int gui_Settings();
 static int gui_Quit();
 
+static int state_alter(u32 keys)
+{
+	extern int saveslot;
+
+	if (keys & KEY_RIGHT) {
+		if (saveslot < 9) saveslot++;
+	} else if (keys & KEY_LEFT) {
+		if (saveslot > 0) saveslot--;
+	}
+
+	return 0;
+}
+
+static char *state_show()
+{
+	extern int saveslot;
+	static char buf[16];
+	sprintf(buf, "%d", saveslot);
+	return buf;
+}
+
 static MENUITEM gui_MainMenuItems[] = {
-	{(char *)"LOAD GAME", NULL, 0, 0, NULL, &gui_LoadIso},
-	{(char *)"SETTINGS", NULL, 0, 0, NULL, &gui_Settings},
-	{(char *)"LOAD STATE", &saveslot, 0, 9, NULL, NULL},
-	{(char *)"SAVE STATE", &saveslot, 0, 9, NULL, NULL},
-	{(char *)"QUIT ", NULL, 0, 0, NULL, &gui_Quit},
+	{(char *)"Load game", NULL, 0, 0, NULL, &gui_LoadIso, NULL, NULL},
+	{(char *)"Settings", NULL, 0, 0, NULL, &gui_Settings, NULL, NULL},
+	{(char *)"Load state", NULL, 0, 0, NULL, NULL, &state_alter, &state_show},
+	{(char *)"Save state", NULL, 0, 0, NULL, NULL, &state_alter, &state_show},
+	{(char *)"Quit", NULL, 0, 0, NULL, &gui_Quit, NULL, NULL},
 	{0}
 };
 
@@ -368,10 +391,10 @@ static char *gui_OffOn[] = {"off", "on"};
 
 static MENUITEM gui_SettingsItems[] = {
 #ifdef gpu_unai
-	{(char *)"Show FPS            ", (int *)&show_fps, 0, 1, (char **)&gui_OffOn, NULL},
-	{(char *)"Frame Limit         ", (int *)&frameLimit, 0, 1, (char **)&gui_OffOn, NULL},
+	{(char *)"Show FPS            ", (int *)&show_fps, 0, 1, (char **)&gui_OffOn, NULL, NULL, NULL},
+	{(char *)"Frame Limit         ", (int *)&frameLimit, 0, 1, (char **)&gui_OffOn, NULL, NULL, NULL},
 #endif
-	{(char *)"Cycle multiplier    ", (int *)&BIAS, 1, 4, NULL, NULL},
+	{(char *)"Cycle multiplier    ", (int *)&BIAS, 1, 4, NULL, NULL, NULL, NULL},
 	{0}
 };
 
@@ -408,7 +431,12 @@ static void ShowMenuItem(int x, int y, MENUITEM *mi)
 {
 	static char string[PATH_MAX];
 
+	
 	if (mi->name) {
+		if (mi->showval) {
+			sprintf(string, "%s %s", mi->name, (*mi->showval)());
+			port_printf(x, y, string);
+		} else
 		if (mi->par) {
 			if (mi->par_name) {
 				sprintf(string, "%s %s", mi->name, mi->par_name[*mi->par]);
@@ -472,6 +500,10 @@ static int gui_RunMenu(MENU *menu)
 				if (result)
 					return result;
 			}
+		}
+
+		if ((keys & (KEY_LEFT | KEY_RIGHT)) && mi->on_press) {
+			(*mi->on_press)(keys);
 		}
 
 		// diplay menu
