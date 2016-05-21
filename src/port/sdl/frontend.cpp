@@ -498,6 +498,42 @@ static char *cdda_show()
 	return buf;
 }
 
+static int RCntFix_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.RCntFix < 1) Config.RCntFix = 1;
+	} else if (keys & KEY_LEFT) {
+		if (Config.RCntFix > 0) Config.RCntFix = 0;
+	}
+
+	return 0;
+}
+
+static char *RCntFix_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.RCntFix ? "on" : "off");
+	return buf;
+}
+
+static int VSyncWA_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.VSyncWA < 1) Config.VSyncWA = 1;
+	} else if (keys & KEY_LEFT) {
+		if (Config.VSyncWA > 0) Config.VSyncWA = 0;
+	}
+
+	return 0;
+}
+
+static char *VSyncWA_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.VSyncWA ? "on" : "off");
+	return buf;
+}
+
 static int settings_back()
 {
 	return 1;
@@ -512,6 +548,8 @@ static MENUITEM gui_SettingsItems[] = {
 #endif
 	{(char *)"XA audio          ", NULL, &xa_alter, &xa_show},
 	{(char *)"CDDA audio        ", NULL, &cdda_alter, &cdda_show},
+	{(char *)"RCntFix           ", NULL, &RCntFix_alter, &RCntFix_show},
+	{(char *)"VSyncWA           ", NULL, &VSyncWA_alter, &VSyncWA_show},
 	{(char *)"Back to main menu", &settings_back, NULL, NULL},
 	{0}
 };
