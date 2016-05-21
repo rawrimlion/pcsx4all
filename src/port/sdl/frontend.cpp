@@ -462,6 +462,42 @@ static char *cycle_show()
 	return buf;
 }
 
+static int xa_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.Xa == 1) Config.Xa = 0;
+	} else if (keys & KEY_LEFT) {
+		if (Config.Xa == 0) Config.Xa = 1;
+	}
+
+	return 0;
+}
+
+static char *xa_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.Xa ? "off" : "on");
+	return buf;
+}
+
+static int cdda_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.Cdda == 1) Config.Cdda = 0;
+	} else if (keys & KEY_LEFT) {
+		if (Config.Cdda == 0) Config.Cdda = 1;
+	}
+
+	return 0;
+}
+
+static char *cdda_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.Cdda ? "off" : "on");
+	return buf;
+}
+
 static int settings_back()
 {
 	return 1;
@@ -469,11 +505,13 @@ static int settings_back()
 
 static MENUITEM gui_SettingsItems[] = {
 	{(char *)"BIOS              ", NULL, &bios_alter, &bios_show},
+	{(char *)"Cycle multiplier  ", NULL, &cycle_alter, &cycle_show},
 #ifdef gpu_unai
 	{(char *)"Show FPS          ", NULL, &fps_alter, &fps_show},
 	{(char *)"Frame Limit       ", NULL, &framelimit_alter, &framelimit_show},
 #endif
-	{(char *)"Cycle multiplier  ", NULL, &cycle_alter, &cycle_show},
+	{(char *)"XA audio          ", NULL, &xa_alter, &xa_show},
+	{(char *)"CDDA audio        ", NULL, &cdda_alter, &cdda_show},
 	{(char *)"Back to main menu", &settings_back, NULL, NULL},
 	{0}
 };
@@ -511,7 +549,6 @@ static void ShowMenuItem(int x, int y, MENUITEM *mi)
 {
 	static char string[PATH_MAX];
 
-	
 	if (mi->name) {
 		if (mi->showval) {
 			sprintf(string, "%s %s", mi->name, (*mi->showval)());
