@@ -129,9 +129,16 @@ static struct dir_item filereq_dir_items[1024] = { { 0, 0 }, };
 #define MENU_LS		(MENU_Y + 10)
 #define MENU_HEIGHT	13
 
-static char *GetCwd(void)
+static inline void ChDir(char *dir)
 {
-	getcwd(gamepath, PATH_MAX);
+	int unused = chdir(dir);
+	(void)unused;
+}
+
+static inline char *GetCwd(void)
+{
+	char *unused = getcwd(gamepath, PATH_MAX);
+	(void)unused;
 #ifdef __WIN32__
 		for (int i = 0; i < PATH_MAX; i++) {
 			if (gamepath[i] == 0)
@@ -207,7 +214,7 @@ char *FileReq(char *dir, const char *ext, char *result)
 	u32 keys;
 
 	if (dir)
-		chdir(dir);
+		ChDir(dir);
 
 	if (!cwd) {
 		cwd = GetCwd();
@@ -276,7 +283,7 @@ char *FileReq(char *dir, const char *ext, char *result)
 				strcat(cwd, "/");
 				strcat(cwd, filereq_dir_items[cursor_pos].name);
 
-				chdir(cwd);
+				ChDir(cwd);
 				cwd = GetCwd();
 				FREE_LIST();
 			} else {
