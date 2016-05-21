@@ -373,6 +373,24 @@ static MENUITEM gui_MainMenuItems[] = {
 #define MENU_SIZE ((sizeof(gui_MainMenuItems) / sizeof(MENUITEM)) - 1)
 static MENU gui_MainMenu = { MENU_SIZE, 0, 112, 120, (MENUITEM *)&gui_MainMenuItems };
 
+static int bios_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.HLE == 1) Config.HLE = 0;
+	} else if (keys & KEY_LEFT) {
+		if (Config.HLE == 0) Config.HLE = 1;
+	}
+
+	return 0;
+}
+
+static char *bios_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.HLE ? "HLE" : "scph1001.bin");
+	return buf;
+}
+
 static int fps_alter(u32 keys)
 {
 #ifdef gpu_unai
@@ -444,17 +462,24 @@ static char *cycle_show()
 	return buf;
 }
 
+static int settings_back()
+{
+	return 1;
+}
+
 static MENUITEM gui_SettingsItems[] = {
+	{(char *)"BIOS              ", NULL, &bios_alter, &bios_show},
 #ifdef gpu_unai
-	{(char *)"Show FPS            ", NULL, &fps_alter, &fps_show},
-	{(char *)"Frame Limit         ", NULL, &framelimit_alter, &framelimit_show},
+	{(char *)"Show FPS          ", NULL, &fps_alter, &fps_show},
+	{(char *)"Frame Limit       ", NULL, &framelimit_alter, &framelimit_show},
 #endif
-	{(char *)"Cycle multiplier    ", NULL, &cycle_alter, &cycle_show},
+	{(char *)"Cycle multiplier  ", NULL, &cycle_alter, &cycle_show},
+	{(char *)"Back to main menu", &settings_back, NULL, NULL},
 	{0}
 };
 
 #define SET_SIZE ((sizeof(gui_SettingsItems) / sizeof(MENUITEM)) - 1)
-static MENU gui_SettingsMenu = { SET_SIZE, 0, 72, 120, (MENUITEM *)&gui_SettingsItems };
+static MENU gui_SettingsMenu = { SET_SIZE, 0, 64, 120, (MENUITEM *)&gui_SettingsItems };
 
 static int gui_LoadIso()
 {
