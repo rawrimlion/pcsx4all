@@ -534,6 +534,24 @@ static char *VSyncWA_show()
 	return buf;
 }
 
+static int syncaudio_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.SyncAudio < 1) Config.SyncAudio = 1;
+	} else if (keys & KEY_LEFT) {
+		if (Config.SyncAudio > 0) Config.SyncAudio = 0;
+	}
+
+	return 0;
+}
+
+static char *syncaudio_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.SyncAudio ? "on" : "off");
+	return buf;
+}
+
 static int settings_back()
 {
 	return 1;
@@ -550,6 +568,7 @@ static MENUITEM gui_SettingsItems[] = {
 	{(char *)"CDDA audio        ", NULL, &cdda_alter, &cdda_show},
 	{(char *)"RCntFix           ", NULL, &RCntFix_alter, &RCntFix_show},
 	{(char *)"VSyncWA           ", NULL, &VSyncWA_alter, &VSyncWA_show},
+	{(char *)"Audio sync        ", NULL, &syncaudio_alter, &syncaudio_show},
 	{(char *)"Back to main menu", &settings_back, NULL, NULL},
 	{0}
 };
