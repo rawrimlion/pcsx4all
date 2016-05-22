@@ -552,29 +552,54 @@ static char *syncaudio_show()
 	return buf;
 }
 
+static int interpolation_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (spu_config.iUseInterpolation < 3) spu_config.iUseInterpolation++;
+	} else if (keys & KEY_LEFT) {
+		if (spu_config.iUseInterpolation > 0) spu_config.iUseInterpolation--;
+	}
+
+	return 0;
+}
+
+static char *interpolation_show()
+{
+	static char buf[16] = "\0";
+	switch (spu_config.iUseInterpolation) {
+	case 0: strcpy(buf, "none"); break;
+	case 1: strcpy(buf, "simple"); break;
+	case 2: strcpy(buf, "gaussian"); break;
+	case 3: strcpy(buf, "cubic"); break;
+	default: buf[0] = '\0'; break;
+	}
+	return buf;
+}
+
 static int settings_back()
 {
 	return 1;
 }
 
 static MENUITEM gui_SettingsItems[] = {
-	{(char *)"BIOS              ", NULL, &bios_alter, &bios_show},
-	{(char *)"Cycle multiplier  ", NULL, &cycle_alter, &cycle_show},
+	{(char *)"[PSX] BIOS              ", NULL, &bios_alter, &bios_show},
+	{(char *)"[PSX] Cycle multiplier  ", NULL, &cycle_alter, &cycle_show},
+	{(char *)"[PSX] XA audio          ", NULL, &xa_alter, &xa_show},
+	{(char *)"[PSX] CDDA audio        ", NULL, &cdda_alter, &cdda_show},
+	{(char *)"[PSX] RCntFix           ", NULL, &RCntFix_alter, &RCntFix_show},
+	{(char *)"[PSX] VSyncWA           ", NULL, &VSyncWA_alter, &VSyncWA_show},
 #ifdef gpu_unai
-	{(char *)"Show FPS          ", NULL, &fps_alter, &fps_show},
-	{(char *)"Frame Limit       ", NULL, &framelimit_alter, &framelimit_show},
+	{(char *)"[GPU] Show FPS          ", NULL, &fps_alter, &fps_show},
+	{(char *)"[GPU] Frame Limit       ", NULL, &framelimit_alter, &framelimit_show},
 #endif
-	{(char *)"XA audio          ", NULL, &xa_alter, &xa_show},
-	{(char *)"CDDA audio        ", NULL, &cdda_alter, &cdda_show},
-	{(char *)"RCntFix           ", NULL, &RCntFix_alter, &RCntFix_show},
-	{(char *)"VSyncWA           ", NULL, &VSyncWA_alter, &VSyncWA_show},
-	{(char *)"Audio sync        ", NULL, &syncaudio_alter, &syncaudio_show},
+	{(char *)"[SPU] Audio sync        ", NULL, &syncaudio_alter, &syncaudio_show},
+	{(char *)"[SPU] Interpolation     ", NULL, &interpolation_alter, &interpolation_show},
 	{(char *)"Back to main menu", &settings_back, NULL, NULL},
 	{0}
 };
 
 #define SET_SIZE ((sizeof(gui_SettingsItems) / sizeof(MENUITEM)) - 1)
-static MENU gui_SettingsMenu = { SET_SIZE, 0, 64, 120, (MENUITEM *)&gui_SettingsItems };
+static MENU gui_SettingsMenu = { SET_SIZE, 0, 24, 120, (MENUITEM *)&gui_SettingsItems };
 
 static int gui_LoadIso()
 {
