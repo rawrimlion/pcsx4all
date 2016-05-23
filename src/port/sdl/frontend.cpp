@@ -570,6 +570,7 @@ static char *syncaudio_show()
 	return buf;
 }
 
+#ifdef spu_pcsxrearmed
 static int interpolation_alter(u32 keys)
 {
 	if (keys & KEY_RIGHT) {
@@ -593,6 +594,7 @@ static char *interpolation_show()
 	}
 	return buf;
 }
+#endif
 
 static int settings_back()
 {
@@ -612,7 +614,9 @@ static MENUITEM gui_SettingsItems[] = {
 	{(char *)"[GPU] Frame Limit       ", NULL, &framelimit_alter, &framelimit_show},
 #endif
 	{(char *)"[SPU] Audio sync        ", NULL, &syncaudio_alter, &syncaudio_show},
+#ifdef spu_pcsxrearmed
 	{(char *)"[SPU] Interpolation     ", NULL, &interpolation_alter, &interpolation_show},
+#endif
 	{(char *)"Back to main menu", &settings_back, NULL, NULL},
 	{0}
 };
