@@ -176,6 +176,42 @@ static void recSYSCALL()
 	end_block = 1;
 }
 
+/* Check if an opcode has a delayed read if in delay slot */
+static int iLoadTest(u32 code)
+{
+	// check for load delay
+	u32 tmp = code >> 26;
+	switch (tmp) {
+	case 0x10: // COP0
+		switch (_Rs_) {
+		case 0x00: // MFC0
+		case 0x02: // CFC0
+			return 1;
+		}
+		break;
+	case 0x12: // COP2
+		switch (_Funct_) {
+		case 0x00:
+			switch (_Rs_) {
+			case 0x00: // MFC2
+			case 0x02: // CFC2
+				return 1;
+			}
+			break;
+		}
+		break;
+	case 0x32: // LWC2
+		return 1;
+	default:
+		// LB/LH/LWL/LW/LBU/LHU/LWR
+		if (tmp >= 0x20 && tmp <= 0x26) {
+			return 1;
+		}
+		break;
+	}
+	return 0;
+}
+
 /* Recompile opcode in delay slot */
 static void recDelaySlot()
 {
