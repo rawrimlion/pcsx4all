@@ -180,8 +180,8 @@ static void recSYSCALL()
 static int iLoadTest(u32 code)
 {
 	// check for load delay
-	u32 tmp = code >> 26;
-	switch (tmp) {
+	u32 op = _fOp_(code);
+	switch (op) {
 	case 0x10: // COP0
 		switch (_fRs_(code)) {
 		case 0x00: // MFC0
@@ -190,7 +190,7 @@ static int iLoadTest(u32 code)
 		}
 		break;
 	case 0x12: // COP2
-		switch (_Funct_) {
+		switch (_fFunct_(code)) {
 		case 0x00:
 			switch (_fRs_(code)) {
 			case 0x00: // MFC2
@@ -204,7 +204,7 @@ static int iLoadTest(u32 code)
 		return 1;
 	default:
 		// LB/LH/LWL/LW/LBU/LHU/LWR
-		if (tmp >= 0x20 && tmp <= 0x26) {
+		if (op >= 0x20 && op <= 0x26) {
 			return 1;
 		}
 		break;
@@ -212,9 +212,34 @@ static int iLoadTest(u32 code)
 	return 0;
 }
 
+static int DelayTest(u32 pc, u32 bpc)
+{
+	u32 code1 = *(u32 *)((char *)PSXM(pc));
+	u32 code2 = *(u32 *)((char *)PSXM(bpc));
+	u32 reg = _fRt_(code1);
+
+	if (iLoadTest(code1)) {
+		return psxTestLoadDelay(reg, code2);
+		// 1: delayReadWrite	// the branch delay load is skipped
+		// 2: delayRead		// branch delay load
+		// 3: delayWrite	// no changes from normal behavior
+	}
+
+	return 0;
+}
+
 /* Recompile opcode in delay slot */
 static void recDelaySlot()
 {
+	/*
+	if (DelayTest(pc, bpc) == 2) {
+		char buffer[512];
+		printf("Found Load Delay\n");
+		disasm_mips_instruction(psxRegs.code, buffer, pc - 4, 0, 0);
+		printf("%08x:\t%s\n", pc - 4, buffer);
+	}
+	*/
+
 	branch = 1;
 	psxRegs.code = *(u32 *)((char *)PSXM(pc));
 	DISASM_PSX(pc);
