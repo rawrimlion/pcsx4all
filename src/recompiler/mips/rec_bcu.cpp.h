@@ -183,7 +183,7 @@ static int iLoadTest(u32 code)
 	u32 tmp = code >> 26;
 	switch (tmp) {
 	case 0x10: // COP0
-		switch (_Rs_) {
+		switch (_fRs_(code)) {
 		case 0x00: // MFC0
 		case 0x02: // CFC0
 			return 1;
@@ -192,7 +192,7 @@ static int iLoadTest(u32 code)
 	case 0x12: // COP2
 		switch (_Funct_) {
 		case 0x00:
-			switch (_Rs_) {
+			switch (_fRs_(code)) {
 			case 0x00: // MFC2
 			case 0x02: // CFC2
 				return 1;
@@ -225,55 +225,77 @@ static void recDelaySlot()
 }
 
 /* Used for BLTZ, BGTZ, BLTZAL, BGEZAL, BLEZ, BGEZ */
-#define EMIT_BxxZ_COMMON(INVCOND, ANDLINK) \
-do { \
-	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH); \
-	recDelaySlot(); \
-	u32 *backpatch = (u32*)recMem; \
-	INVCOND(br1, 0); \
-	LUI(TEMP_1, (bpc >> 16)); /* <BD> */ \
-	\
-	rec_recompile_end_part1(); \
-	regClearBranch(); \
-	ORI(MIPSREG_V0, TEMP_1, (bpc & 0xffff)); \
-	\
-	if (ANDLINK) { \
-		LI32(TEMP_2, nbpc); \
-		SW(TEMP_2, PERM_REG_1, offGPR(31)); \
-	} \
-	\
-	rec_recompile_end_part2(); \
-	\
-	cycles_pending = 0; \
-	\
-	fixup_branch(backpatch); \
-	regUnlock(br1); \
-	\
-} while (0)
+static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
+{
+	u32 code = psxRegs.code;
+	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+	recDelaySlot();
+	u32 *backpatch = (u32 *)recMem;
 
-#define EMIT_BxxZ(A)	EMIT_BxxZ_COMMON(A, 0)
-#define EMIT_BxxZAL(A)	EMIT_BxxZ_COMMON(A, 1)
+	// Check opcode and emit branch with REVERSED logic!
+	switch (code & 0xfc1f0000) {
+	case 0x04000000: /* BLTZ */
+	case 0x04100000: /* BLTZAL */	BGEZ(br1, 0); break;
+	case 0x04010000: /* BGEZ */
+	case 0x04110000: /* BGEZAL */	BLTZ(br1, 0); break;
+	case 0x1c000000: /* BGTZ */	BLEZ(br1, 0); break;
+	case 0x18000000: /* BLEZ */	BGTZ(br1, 0); break;
+	default:
+		printf("Error opcode=%08x\n", code);
+		exit(1);
+	}
 
-#define EMIT_Bxx(INVCOND) \
-do { \
-	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH); \
-	u32 br2 = regMipsToHost(_Rt_, REG_LOADBRANCH, REG_REGISTERBRANCH); \
-	recDelaySlot(); \
-	u32 *backpatch = (u32*)recMem; \
-	INVCOND(br1, br2, 0); \
-	LUI(TEMP_1, (bpc >> 16)); /* <BD> */ \
-	\
-	rec_recompile_end_part1(); \
-	regClearBranch(); \
-	ORI(MIPSREG_V0, TEMP_1, (bpc & 0xffff)); \
-	rec_recompile_end_part2(); \
-	\
-	cycles_pending = 0; \
-	\
-	fixup_branch(backpatch); \
-	regUnlock(br1); \
-	regUnlock(br2); \
-} while (0)
+	LUI(TEMP_1, (bpc >> 16)); /* <BD> */
+
+	rec_recompile_end_part1();
+	regClearBranch();
+	ORI(MIPSREG_V0, TEMP_1, (bpc & 0xffff));
+
+	if (andlink) {
+		LI32(TEMP_2, nbpc);
+		SW(TEMP_2, PERM_REG_1, offGPR(31));
+	}
+
+	rec_recompile_end_part2();
+
+	cycles_pending = 0;
+
+	fixup_branch(backpatch);
+	regUnlock(br1);
+}
+
+/* Used for BEQ and BNE */
+static void emitBxx(u32 bpc)
+{
+	u32 code = psxRegs.code;
+	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+	u32 br2 = regMipsToHost(_Rt_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+	recDelaySlot();
+	u32 *backpatch = (u32 *)recMem;
+
+	// Check opcode and emit branch with REVERSED logic!
+	switch (code & 0xfc000000) {
+	case 0x10000000: /* BEQ */	BNE(br1, br2, 0); break;
+	case 0x14000000: /* BNE */	BEQ(br1, br2, 0); break;
+	default:
+		printf("Error opcode=%08x\n", code);
+		exit(1);
+	}
+
+	LUI(TEMP_1, (bpc >> 16)); /* <BD> */
+
+	rec_recompile_end_part1();
+	regClearBranch();
+	ORI(MIPSREG_V0, TEMP_1, (bpc & 0xffff));
+
+	rec_recompile_end_part2();
+
+	cycles_pending = 0;
+
+	fixup_branch(backpatch);
+	regUnlock(br1);
+	regUnlock(br2);
+}
 
 static void iJumpNormal(u32 branchPC)
 {
@@ -320,7 +342,7 @@ static void recBLTZ()
 		return;
 	}
 
-	EMIT_BxxZ(BGEZ);
+	emitBxxZ(0, bpc, nbpc);
 }
 
 static void recBGTZ()
@@ -338,7 +360,7 @@ static void recBGTZ()
 		return;
 	}
 
-	EMIT_BxxZ(BLEZ);
+	emitBxxZ(0, bpc, nbpc);
 }
 
 static void recBLTZAL()
@@ -356,7 +378,7 @@ static void recBLTZAL()
 		return;
 	}
 
-	EMIT_BxxZAL(BGEZ);
+	emitBxxZ(1, bpc, nbpc);
 }
 
 static void recBGEZAL()
@@ -374,7 +396,7 @@ static void recBGEZAL()
 		return;
 	}
 
-	EMIT_BxxZAL(BLTZ);
+	emitBxxZ(1, bpc, nbpc);
 }
 
 static void recJ()
@@ -443,7 +465,7 @@ static void recBEQ()
 		return;
 	}
 
-	EMIT_Bxx(BNE);
+	emitBxx(bpc);
 }
 
 static void recBNE()
@@ -461,7 +483,7 @@ static void recBNE()
 		return;
 	}
 
-	EMIT_Bxx(BEQ);
+	emitBxx(bpc);
 }
 
 static void recBLEZ()
@@ -479,7 +501,7 @@ static void recBLEZ()
 		return;
 	}
 
-	EMIT_BxxZ(BGTZ);
+	emitBxxZ(0, bpc, nbpc);
 }
 
 static void recBGEZ()
@@ -497,7 +519,7 @@ static void recBGEZ()
 		return;
 	}
 
-	EMIT_BxxZ(BLTZ);
+	emitBxxZ(0, bpc, nbpc);
 }
 
 static void recBREAK() { }
