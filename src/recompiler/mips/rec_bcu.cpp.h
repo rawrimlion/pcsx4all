@@ -219,6 +219,16 @@ static int DelayTest(u32 pc, u32 bpc)
 	u32 reg = _fRt_(code1);
 
 	if (iLoadTest(code1)) {
+		// FIXME: Remove later
+		if (psxTestLoadDelay(reg, code2) == 2) {
+			char buffer[512];
+			printf("Found Load Delay\n");
+			disasm_mips_instruction(code1, buffer, pc, 0, 0);
+			printf("%08x:\t%s\n", pc, buffer);
+			disasm_mips_instruction(code2, buffer, bpc, 0, 0);
+			printf("%08x:\t%s\n", bpc, buffer);
+		}
+
 		return psxTestLoadDelay(reg, code2);
 		// 1: delayReadWrite	// the branch delay load is skipped
 		// 2: delayRead		// branch delay load
@@ -231,15 +241,6 @@ static int DelayTest(u32 pc, u32 bpc)
 /* Recompile opcode in delay slot */
 static void recDelaySlot()
 {
-	/*
-	if (DelayTest(pc, bpc) == 2) {
-		char buffer[512];
-		printf("Found Load Delay\n");
-		disasm_mips_instruction(psxRegs.code, buffer, pc - 4, 0, 0);
-		printf("%08x:\t%s\n", pc - 4, buffer);
-	}
-	*/
-
 	branch = 1;
 	psxRegs.code = *(u32 *)((char *)PSXM(pc));
 	DISASM_PSX(pc);
@@ -254,6 +255,9 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 {
 	u32 code = psxRegs.code;
 	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+
+	int dt = DelayTest(pc, bpc);
+
 	recDelaySlot();
 	u32 *backpatch = (u32 *)recMem;
 
@@ -295,6 +299,9 @@ static void emitBxx(u32 bpc)
 	u32 code = psxRegs.code;
 	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
 	u32 br2 = regMipsToHost(_Rt_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+
+	int dt = DelayTest(pc, bpc);
+
 	recDelaySlot();
 	u32 *backpatch = (u32 *)recMem;
 
@@ -324,6 +331,8 @@ static void emitBxx(u32 bpc)
 
 static void iJumpNormal(u32 bpc)
 {
+	int dt = DelayTest(pc, bpc);
+
 	recDelaySlot();
 
 	rec_recompile_end_part1();
@@ -338,6 +347,8 @@ static void iJumpNormal(u32 bpc)
 
 static void iJumpAL(u32 bpc, u32 nbpc)
 {
+	int dt = DelayTest(pc, bpc);
+
 	recDelaySlot();
 
 	rec_recompile_end_part1();
